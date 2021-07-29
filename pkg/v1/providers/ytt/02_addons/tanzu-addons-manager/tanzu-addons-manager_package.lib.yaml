@@ -4,7 +4,6 @@
 #@ load("tanzu-addons-manager_addon_data.lib.yaml", "tanzuaddonsmanagerdatavalues", "tanzuaddonsmanagerimageinfodatavalues")
 
 #@ def tanzuaddonsmanagerpackageyaml():
-#@ tanzuAddonsManagerPackageBundle = get_bom_data_for_tkr_name().components["tkg-core-packages"][0].images["addons-manager.tanzu.vmware.com"]
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -46,11 +45,6 @@ spec:
     #! is because YTT will throw error if any struct is None or keys are missing, we expect to see those error and templating
     #! will be exit immediately.
     refName: #@ get_bom_data_for_tkr_name().addons["tanzu-addons-manager"].packageName
-    #! In alpha9 release, kapp-controller's implementation shows this field is optional,
-    #! however InstalledPackage CR has error status if not provide versionSelection.
-    #! It complains about "Unsupported version selection type (currently supported: semver)" from this CR.
-    #! To workaround, we add versionSelection and use the tag from TKR Bom as version constraints, and this is also aligned
-    #! with what package CLI plugin does.
     versionSelection:
       prereleases: {}
   values:

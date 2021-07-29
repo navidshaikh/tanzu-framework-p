@@ -1,0 +1,35 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:yaml", "yaml")
+#@ load("/lib/helpers.star", "get_bom_data_for_tkr_name", "ValuesFormatStr")
+#@ load("antrea_addon_data.lib.yaml", "antreadatavalues")
+
+#@ def antreapackageyaml():
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  name: antrea
+  namespace: tkg-system
+spec:
+  serviceAccountName: tanzu-addons-package-sa
+  packageRef:
+    #! PackageName is available in TKR BOM under the particular path listed below. We do not have to validate the key existence
+    #! is because YTT will throw error if any struct is None or keys are missing, we expect to see those error and templating
+    #! will be exit immediately.
+    refName: #@ get_bom_data_for_tkr_name().addons["antrea"].packageName
+    versionSelection:
+      prereleases: {}
+  values:
+  - secretRef:
+      name: antrea-data-values
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: antrea-data-values
+  namespace: tkg-system
+type: Opaque
+stringData:
+  values.yaml: #@ ValuesFormatStr.format(yaml.encode(antreadatavalues()))
+
+#@ end
