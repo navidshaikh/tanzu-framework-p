@@ -85,12 +85,25 @@ func ComputeFeatureStates(featureGateSpec configv1alpha1.FeatureGateSpec, featur
 
 // FeatureActivatedInNamespace returns true only if all of the features specified are activated in the namespace.
 func FeatureActivatedInNamespace(ctx context.Context, c client.Client, namespace, feature string) (bool, error) {
-	selector := metav1.LabelSelector{
-		MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: "kubernetes.io/metadata.name", Operator: metav1.LabelSelectorOpIn, Values: []string{namespace}},
-		},
+	if namespace == "" || feature == "" {
+		return false, nil
 	}
-	return FeaturesActivatedInNamespacesMatchingSelector(ctx, c, selector, []string{feature})
+
+	featureGatesList := &configv1alpha1.FeatureGateList{}
+	if err := c.List(ctx, featureGatesList); err != nil {
+		return false, err
+	}
+
+	// Map of namespace to a set of features activated in that namespace.
+	namespaceToActivatedFeatures := make(map[string]sets.String)
+	for i := range featureGatesList.Items {
+		fg := featureGatesList.Items[i]
+		for _, ns := range fg.Status.Namespaces {
+			namespaceToActivatedFeatures[ns] = sets.NewString(fg.Status.ActivatedFeatures...)
+		}
+	}
+	activatedFeatures, found := namespaceToActivatedFeatures[namespace]
+	return found && activatedFeatures.Has(feature), nil
 }
 
 // FeaturesActivatedInNamespacesMatchingSelector returns true only if all the features specified are activated in every namespace matched by the selector.
